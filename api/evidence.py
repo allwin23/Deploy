@@ -248,20 +248,20 @@ def download_evidence(evidence_id):
             404:
                 description: Evidence not found or no content
         """
-    ev = Evidence.query.filter_by(evidence_id=evidence_id).first()
-    if not ev:
-        return jsonify({'error': 'Evidence not found'}), 404
-    if not ev.content_text:
-        return jsonify({'error': 'No content available for this evidence'}), 404
+        ev = Evidence.query.filter_by(evidence_id=evidence_id).first()
+        if not ev:
+                return jsonify({'error': 'Evidence not found'}), 404
+        if not ev.content_text:
+                return jsonify({'error': 'No content available for this evidence'}), 404
 
-    filename = ev.filename or f"{evidence_id}.txt"
-    content_bytes = ev.content_text.encode('utf-8')
-    return send_file(
-        BytesIO(content_bytes),
-        as_attachment=True,
-        download_name=filename,
-        mimetype='text/plain'
-    )
+        filename = ev.filename or f"{evidence_id}.txt"
+        content_bytes = ev.content_text.encode('utf-8')
+        return send_file(
+                BytesIO(content_bytes),
+                as_attachment=True,
+                download_name=filename,
+                mimetype='text/plain'
+        )
 
 
 # --------------------------------------------------------------------------
@@ -286,26 +286,26 @@ def latest_lines():
             200:
                 description: Latest line for each evidence record
         """
-    limit = request.args.get('limit', 100, type=int)
-    limit = max(1, min(limit, 500))
+        limit = request.args.get('limit', 100, type=int)
+        limit = max(1, min(limit, 500))
 
-    records = Evidence.query.order_by(Evidence.created_at.desc()).limit(limit).all()
-    data = []
-    for ev in records:
-        last_line = _get_last_non_empty_line(ev.content_text or '')
-        data.append({
-            'evidence_id': ev.evidence_id,
-            'filename': ev.filename,
-            'tx_id': ev.tx_id,
-            'last_line': last_line,
-            'timestamp': ev.created_at.isoformat(),
-        })
+        records = Evidence.query.order_by(Evidence.created_at.desc()).limit(limit).all()
+        data = []
+        for ev in records:
+                last_line = _get_last_non_empty_line(ev.content_text or '')
+                data.append({
+                        'evidence_id': ev.evidence_id,
+                        'filename': ev.filename,
+                        'tx_id': ev.tx_id,
+                        'last_line': last_line,
+                        'timestamp': ev.created_at.isoformat(),
+                })
 
-    return jsonify({
-        'status': 'success',
-        'count': len(data),
-        'data': data,
-    }), 200
+        return jsonify({
+                'status': 'success',
+                'count': len(data),
+                'data': data,
+        }), 200
 
 
 # --------------------------------------------------------------------------
