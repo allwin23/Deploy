@@ -5,8 +5,41 @@ This provides the "gimmick" info the user requested to show "connected systems".
 
 from flask import Blueprint, jsonify, current_app
 from api.auth import login_required
+from models import db, Evidence, Transaction, Block
 
 network_bp = Blueprint('network', __name__)
+
+
+@network_bp.route('/reset', methods=['POST'])
+@login_required
+def network_reset():
+    """
+    Clear all demo data (Blocks, Transactions, Evidence) for a fresh start.
+    Does NOT delete users.
+    ---
+    tags:
+      - Network
+    security:
+      - Bearer: []
+    responses:
+      200:
+        description: Database reset successful
+      500:
+        description: Reset failed
+    """
+    try:
+        # Delete in order of dependency (FK constraints)
+        Evidence.query.delete()
+        Transaction.query.delete()
+        Block.query.delete()
+        db.session.commit()
+        return jsonify({
+            'status': 'success', 
+            'message': 'All data has been cleared. Network is ready for a fresh start.'
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': 'Reset failed', 'message': str(e)}), 500
 
 
 @network_bp.route('/status', methods=['GET'])

@@ -26,7 +26,15 @@ def create_app():
         'title': 'Blockchain Demo API',
         'uiversion': 3,
         'specs_route': '/apidocs/',
-        'description': 'A production-grade mock blockchain backend for demo purposes.'
+        'description': 'A production-grade mock blockchain backend for demo purposes.',
+        'securityDefinitions': {
+            'Bearer': {
+                'type': 'apiKey',
+                'name': 'Authorization',
+                'in': 'header',
+                'description': 'JWT Authorization header using the Bearer scheme. Example: "Bearer {token}"'
+            }
+        }
     }
     swagger = Swagger(app)
 

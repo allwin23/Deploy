@@ -47,21 +47,30 @@ def submit_evidence():
       - Evidence
     security:
       - Bearer: []
+    consumes:
+      - multipart/form-data
     parameters:
-      - name: body
-        in: body
+      - name: file
+        in: formData
+        type: file
         required: false
-        schema:
-          type: object
-          properties:
-            evidenceId:
-              type: string
-            honeypotId:
-              type: string
-            content:
-              type: string
-            attackType:
-              type: string
+        description: The evidence file to upload
+      - name: evidenceId
+        in: formData
+        type: string
+        description: Unique evidence ID (generated if missing)
+      - name: honeypotId
+        in: formData
+        type: string
+        description: ID of source honeypot
+      - name: attackType
+        in: formData
+        type: string
+        description: e.g. SQLi, Brute Force
+      - name: content
+        in: formData
+        type: string
+        description: Raw text evidence (if no file)
     responses:
       201:
         description: Evidence committed to blockchain
