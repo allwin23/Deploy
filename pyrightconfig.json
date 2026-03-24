@@ -1,0 +1,16 @@
+{
+    "include": [
+        "demo"
+    ],
+    "extraPaths": [
+        "./demo",
+        "./demo/venv/lib/python3.10/site-packages"
+    ],
+    "venvPath": "demo",
+    "venv": "venv",
+    "pythonVersion": "3.10",
+    "pythonPath": "./demo/venv/bin/python",
+    "typeCheckingMode": "basic",
+    "useLibraryCodeForTypes": true,
+    "reportMissingModuleSource": "none"
+}
