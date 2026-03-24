@@ -228,6 +228,26 @@ def get_evidence(evidence_id):
 
 @evidence_bp.route('/<evidence_id>/download', methods=['GET'])
 def download_evidence(evidence_id):
+        """
+        Download evidence content as a file
+        ---
+        tags:
+            - Evidence
+        parameters:
+            - name: evidence_id
+                in: path
+                type: string
+                required: true
+                description: Evidence ID to download
+        responses:
+            200:
+                description: File download (text/plain)
+                schema:
+                    type: string
+                    example: "last line of evidence\nsecond line"
+            404:
+                description: Evidence not found or no content
+        """
     ev = Evidence.query.filter_by(evidence_id=evidence_id).first()
     if not ev:
         return jsonify({'error': 'Evidence not found'}), 404
@@ -250,6 +270,22 @@ def download_evidence(evidence_id):
 
 @evidence_bp.route('/latest-lines', methods=['GET'])
 def latest_lines():
+        """
+        Get the last non-empty line for each evidence record
+        ---
+        tags:
+            - Evidence
+        parameters:
+            - name: limit
+                in: query
+                type: integer
+                required: false
+                default: 100
+                description: Max records to return (1-500)
+        responses:
+            200:
+                description: Latest line for each evidence record
+        """
     limit = request.args.get('limit', 100, type=int)
     limit = max(1, min(limit, 500))
 
