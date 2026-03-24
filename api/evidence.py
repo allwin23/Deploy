@@ -14,7 +14,8 @@ import json
 import uuid
 from datetime import datetime, timezone
 
-from flask import Blueprint, request, jsonify
+from io import BytesIO
+from flask import Blueprint, request, jsonify, send_file
 
 from models import db, Evidence, User
 from blockchain.simulator import commit_transaction
@@ -31,6 +32,11 @@ def _get_current_user() -> User | None:
     if not username:
         return None
     return User.query.filter_by(username=username).first()
+
+
+def _get_last_non_empty_line(text: str) -> str:
+    lines = [line.strip() for line in text.split('\n') if line.strip()]
+    return lines[-1] if lines else 'Empty evidence content'
 
 
 # --------------------------------------------------------------------------
@@ -172,11 +178,12 @@ def list_evidence():
         description: List of all evidence entries
     """
     all_evidence = Evidence.query.order_by(Evidence.created_at.desc()).all()
+    include_content = request.args.get('include_content', 'false').lower() in ('1', 'true', 'yes')
 
     return jsonify({
         'status': 'success',
         'total_records': len(all_evidence),
-        'data': [e.to_dict(include_content=False) for e in all_evidence],
+        'data': [e.to_dict(include_content=include_content) for e in all_evidence],
     }), 200
 
 
@@ -213,6 +220,56 @@ def get_evidence(evidence_id):
     if not ev:
         return jsonify({'error': 'Evidence not found'}), 404
     return jsonify({'status': 'success', 'data': ev.to_dict()}), 200
+
+
+# --------------------------------------------------------------------------
+# GET /api/evidence/<id>/download  — download content as a file
+# --------------------------------------------------------------------------
+
+@evidence_bp.route('/<evidence_id>/download', methods=['GET'])
+def download_evidence(evidence_id):
+    ev = Evidence.query.filter_by(evidence_id=evidence_id).first()
+    if not ev:
+        return jsonify({'error': 'Evidence not found'}), 404
+    if not ev.content_text:
+        return jsonify({'error': 'No content available for this evidence'}), 404
+
+    filename = ev.filename or f"{evidence_id}.txt"
+    content_bytes = ev.content_text.encode('utf-8')
+    return send_file(
+        BytesIO(content_bytes),
+        as_attachment=True,
+        download_name=filename,
+        mimetype='text/plain'
+    )
+
+
+# --------------------------------------------------------------------------
+# GET /api/evidence/latest-lines — last line for every record
+# --------------------------------------------------------------------------
+
+@evidence_bp.route('/latest-lines', methods=['GET'])
+def latest_lines():
+    limit = request.args.get('limit', 100, type=int)
+    limit = max(1, min(limit, 500))
+
+    records = Evidence.query.order_by(Evidence.created_at.desc()).limit(limit).all()
+    data = []
+    for ev in records:
+        last_line = _get_last_non_empty_line(ev.content_text or '')
+        data.append({
+            'evidence_id': ev.evidence_id,
+            'filename': ev.filename,
+            'tx_id': ev.tx_id,
+            'last_line': last_line,
+            'timestamp': ev.created_at.isoformat(),
+        })
+
+    return jsonify({
+        'status': 'success',
+        'count': len(data),
+        'data': data,
+    }), 200
 
 
 # --------------------------------------------------------------------------

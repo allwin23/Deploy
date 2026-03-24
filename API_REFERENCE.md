@@ -79,7 +79,30 @@ Authentication is simplified. No endpoints require an `Authorization` header.
   - `file`: The actual file to upload.
   - Plus any of the fields from the JSON version (in form-data).
 
-### 3. Cumulative Statistics
+### 3. List All Evidence
+- **URL**: `GET /api/evidence?include_content=false`
+- **Query Params**:
+  | Param | Type | Required | Description |
+  |---|---|---|---|
+  | `include_content` | `boolean` | No | If true, returns full content for each record |
+- **Response (200 OK)**:
+  ```json
+  {
+    "status": "success",
+    "total_records": "int",
+    "data": [
+      {
+        "evidence_id": "string",
+        "filename": "string",
+        "content_hash": "string",
+        "content_size_bytes": "int",
+        "created_at": "ISO8601 string"
+      }
+    ]
+  }
+  ```
+
+### 4. Cumulative Statistics
 - **URL**: `GET /api/evidence/stats`
 - **Response (200 OK)**:
   ```json
@@ -93,7 +116,34 @@ Authentication is simplified. No endpoints require an `Authorization` header.
   }
   ```
 
-### 4. Timeline Latest Command
+### 5. Download Evidence File
+- **URL**: `GET /api/evidence/<evidence_id>/download`
+- **Response (200 OK)**: File download (`text/plain`)
+
+### 6. Latest Lines (All Records)
+- **URL**: `GET /api/evidence/latest-lines?limit=100`
+- **Query Params**:
+  | Param | Type | Required | Description |
+  |---|---|---|---|
+  | `limit` | `integer` | No | Max records to return (1-500) |
+- **Response (200 OK)**:
+  ```json
+  {
+    "status": "success",
+    "count": "int",
+    "data": [
+      {
+        "evidence_id": "string",
+        "filename": "string",
+        "tx_id": "string",
+        "last_line": "string",
+        "timestamp": "ISO8601 string"
+      }
+    ]
+  }
+  ```
+
+### 7. Timeline Latest Command
 - **URL**: `GET /api/evidence/latest-command`
 - **Response (200 OK)**:
   ```json
