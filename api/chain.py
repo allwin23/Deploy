@@ -10,21 +10,16 @@ GET /api/chain/verify   → Cryptographic integrity check of the entire chain
 from flask import Blueprint, jsonify, request
 from models import Block, Transaction
 from blockchain.simulator import get_chain_stats, verify_chain_integrity
-from api.auth import login_required
-
 chain_bp = Blueprint('chain', __name__)
 
 
 @chain_bp.route('', methods=['GET'])
-@login_required
 def get_chain():
     """
     Get paginated blockchain blocks
     ---
     tags:
       - Chain
-    security:
-      - Bearer: []
     parameters:
       - name: page
         in: query
@@ -57,15 +52,12 @@ def get_chain():
 
 
 @chain_bp.route('/stats', methods=['GET'])
-@login_required
 def chain_stats():
     """
     Get blockchain summary statistics
     ---
     tags:
       - Chain
-    security:
-      - Bearer: []
     responses:
       200:
         description: Chain stats
@@ -78,7 +70,6 @@ def chain_stats():
 
 
 @chain_bp.route('/blocks/<int:block_number>', methods=['GET'])
-@login_required
 def get_block(block_number):
     block = Block.query.filter_by(block_number=block_number).first()
     if not block:
@@ -91,15 +82,12 @@ def get_block(block_number):
 
 
 @chain_bp.route('/verify', methods=['GET'])
-@login_required
 def verify_chain():
     """
     Verify blockchain integrity
     ---
     tags:
       - Chain
-    security:
-      - Bearer: []
     responses:
       200:
         description: Integrity check result

@@ -15,12 +15,9 @@ import uuid
 from datetime import datetime, timezone
 
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import get_jwt_identity
 
 from models import db, Evidence, User
 from blockchain.simulator import commit_transaction
-from api.auth import login_required
-
 evidence_bp = Blueprint('evidence', __name__)
 
 
@@ -29,7 +26,10 @@ def _sha256(data: str) -> str:
 
 
 def _get_current_user() -> User | None:
-    username = get_jwt_identity()
+    username = request.headers.get('X-Username') or request.args.get('username', '')
+    username = username.strip() if username else ''
+    if not username:
+        return None
     return User.query.filter_by(username=username).first()
 
 
@@ -38,15 +38,12 @@ def _get_current_user() -> User | None:
 # --------------------------------------------------------------------------
 
 @evidence_bp.route('', methods=['POST'])
-@login_required
 def submit_evidence():
     """
     Submit new evidence
     ---
     tags:
       - Evidence
-    security:
-      - Bearer: []
     consumes:
       - multipart/form-data
     parameters:
@@ -164,15 +161,12 @@ def submit_evidence():
 # --------------------------------------------------------------------------
 
 @evidence_bp.route('', methods=['GET'])
-@login_required
 def list_evidence():
     """
     List all evidence records
     ---
     tags:
       - Evidence
-    security:
-      - Bearer: []
     responses:
       200:
         description: List of all evidence entries
@@ -191,7 +185,6 @@ def list_evidence():
 # --------------------------------------------------------------------------
 
 @evidence_bp.route('/stats', methods=['GET'])
-@login_required
 def evidence_stats():
     from sqlalchemy import func
     total_records = Evidence.query.count()
@@ -215,7 +208,6 @@ def evidence_stats():
 # --------------------------------------------------------------------------
 
 @evidence_bp.route('/<evidence_id>', methods=['GET'])
-@login_required
 def get_evidence(evidence_id):
     ev = Evidence.query.filter_by(evidence_id=evidence_id).first()
     if not ev:
@@ -228,28 +220,11 @@ def get_evidence(evidence_id):
 # --------------------------------------------------------------------------
 
 @evidence_bp.route('/<evidence_id>/status', methods=['PUT'])
-@login_required
 def update_status(evidence_id):
-    user = _get_current_user()
-    ev = Evidence.query.filter_by(evidence_id=evidence_id).first()
-    if not ev:
-        return jsonify({'error': 'Evidence not found'}), 404
-
-    new_status = (request.get_json(silent=True) or {}).get('status', '')
-    if new_status not in ('ACTIVE', 'ARCHIVED', 'UNDER_REVIEW', 'DELETED'):
-        return jsonify({'error': 'Invalid status value'}), 400
-
-    payload = json.dumps({'evidenceId': evidence_id, 'newStatus': new_status})
-    tx = commit_transaction(
-        submitter=user.username if user else 'system',
-        submitter_wallet=user.wallet_address if user else '0x0',
-        function_name='UpdateEvidenceStatus',
-        payload=payload,
-    )
-    ev.record_status = new_status
-    db.session.commit()
-
-    return jsonify({'status': 'success', 'tx_id': tx.tx_id, 'new_status': new_status}), 200
+    return jsonify({
+        'error': 'Immutable database',
+        'message': 'Evidence records cannot be updated.'
+    }), 409
 
 
 # --------------------------------------------------------------------------
@@ -257,42 +232,11 @@ def update_status(evidence_id):
 # --------------------------------------------------------------------------
 
 @evidence_bp.route('/<evidence_id>/transfer', methods=['POST'])
-@login_required
 def transfer_custody(evidence_id):
-    user = _get_current_user()
-    ev = Evidence.query.filter_by(evidence_id=evidence_id).first()
-    if not ev:
-        return jsonify({'error': 'Evidence not found'}), 404
-
-    data = request.get_json(silent=True) or {}
-    new_org = data.get('newOwningOrg', '')
-    reason = data.get('reason', 'Administrative transfer')
-
-    if not new_org:
-        return jsonify({'error': 'newOwningOrg is required'}), 400
-
-    payload = json.dumps({'evidenceId': evidence_id, 'to': new_org, 'reason': reason})
-    tx = commit_transaction(
-        submitter=user.username if user else 'system',
-        submitter_wallet=user.wallet_address if user else '0x0',
-        function_name='TransferCustody',
-        payload=payload,
-    )
-
-    # Update custody chain
-    chain = json.loads(ev.custody_chain)
-    chain.append({
-        'from': ev.owning_org,
-        'to': new_org,
-        'reason': reason,
-        'tx_id': tx.tx_id,
-        'timestamp': datetime.now(timezone.utc).isoformat(),
-    })
-    ev.owning_org = new_org
-    ev.custody_chain = json.dumps(chain)
-    db.session.commit()
-
-    return jsonify({'status': 'success', 'tx_id': tx.tx_id, 'custody_chain': chain}), 200
+    return jsonify({
+        'error': 'Immutable database',
+        'message': 'Evidence custody cannot be updated.'
+    }), 409
 
 
 # --------------------------------------------------------------------------
@@ -300,7 +244,6 @@ def transfer_custody(evidence_id):
 # --------------------------------------------------------------------------
 
 @evidence_bp.route('/latest-command', methods=['GET'])
-@login_required
 def latest_command():
     """Returns the last line of the latest evidence submission."""
     """
@@ -308,8 +251,6 @@ def latest_command():
     ---
     tags:
       - Evidence
-    security:
-      - Bearer: []
     responses:
       200:
         description: Command line output

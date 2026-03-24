@@ -1,7 +1,7 @@
 """
-Auth API — JWT-based login/logout with wallet identity.
+Auth API — simple login with wallet identity.
 
-POST /api/auth/login   → { access_token, user }
+POST /api/auth/login   → { user }
 POST /api/auth/logout  → { message }
 GET  /api/auth/me      → { username, wallet_address, msp_id, ... }
 """
@@ -11,9 +11,6 @@ import hashlib
 from functools import wraps
 
 from flask import Blueprint, request, jsonify, current_app
-from flask_jwt_extended import (
-    create_access_token, jwt_required, get_jwt_identity
-)
 
 from models import db, User
 
@@ -55,11 +52,10 @@ def _get_or_create_user(username: str) -> User:
 # --------------------------------------------------------------------------
 
 def login_required(f):
-    @wraps(f)
-    @jwt_required()
-    def wrapper(*args, **kwargs):
-        return f(*args, **kwargs)
-    return wrapper
+  @wraps(f)
+  def wrapper(*args, **kwargs):
+    return f(*args, **kwargs)
+  return wrapper
 
 
 # --------------------------------------------------------------------------
@@ -83,9 +79,6 @@ def login():
             username:
               type: string
               example: alice
-            password:
-              type: string
-              example: password123
     responses:
       200:
         description: Login successful
@@ -94,21 +87,12 @@ def login():
     """
     data = request.get_json(silent=True) or {}
     username = data.get('username', '').strip()
-    password = data.get('password', '')
-
-    if not username or not password:
-        return jsonify({'error': 'Missing credentials'}), 400
-
-    users_map = _get_users()
-    if username not in users_map or users_map[username] != password:
-        return jsonify({'error': 'Invalid username or password'}), 401
+    if not username:
+      return jsonify({'error': 'Missing username'}), 400
 
     user = _get_or_create_user(username)
-    token = create_access_token(identity=username)
     return jsonify({
         'message': 'Login successful',
-        'access_token': token,
-        'token_type': 'Bearer',
         'user': user.to_dict(),
     }), 200
 
@@ -127,19 +111,18 @@ def me():
     ---
     tags:
       - Auth
-    security:
-      - Bearer: []
     responses:
       200:
         description: User profile data
     """
-    username = get_jwt_identity()
+    username = request.args.get('username', '').strip()
+    if not username:
+        return jsonify({'error': 'Missing username'}), 400
     user = _get_or_create_user(username)
     return jsonify(user.to_dict()), 200
 
 
 @auth_bp.route('/wallet/<username>', methods=['GET'])
-@login_required
 def wallet_info(username):
     """Return the wallet address for any registered user (public info)."""
     user = User.query.filter_by(username=username).first()

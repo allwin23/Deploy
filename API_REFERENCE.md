@@ -4,7 +4,7 @@ This document provides exact schemas, field types, and example payloads for all 
 
 ## Authentication (`/api/auth`)
 
-All endpoints except `/login` require the header: `Authorization: Bearer <JWT_TOKEN>`
+Authentication is simplified. No endpoints require an `Authorization` header.
 
 ### 1. Login
 - **URL**: `POST /api/auth/login`
@@ -16,8 +16,6 @@ All endpoints except `/login` require the header: `Authorization: Bearer <JWT_TO
 - **Success Response (200 OK)**:
   ```json
   {
-    "access_token": "string",
-    "token_type": "Bearer",
     "message": "string",
     "user": {
       "username": "string",
@@ -35,7 +33,7 @@ All endpoints except `/login` require the header: `Authorization: Bearer <JWT_TO
   ```
 
 ### 2. Get Current Profile
-- **URL**: `GET /api/auth/me`
+- **URL**: `GET /api/auth/me?username=alice`
 - **Response (200 OK)**:
   ```json
   {

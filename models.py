@@ -12,8 +12,13 @@ import hashlib
 import uuid
 from datetime import datetime, timezone
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import event
+from sqlalchemy.orm import Session
+from sqlalchemy.sql.dml import Update, Delete
 
 db = SQLAlchemy()
+
+IMMUTABLE_TABLES = {'evidence', 'transactions', 'blocks'}
 
 
 def _utcnow():
@@ -181,3 +186,30 @@ class Evidence(db.Model):
         if include_content:
             d['content'] = self.content_text
         return d
+
+
+def _immutable_error() -> RuntimeError:
+    return RuntimeError('Immutable data: updates and deletes are disabled.')
+
+
+@event.listens_for(Session, 'before_flush')
+def _block_object_mutations(session, flush_context, instances):
+    if session.info.get('allow_mutation'):
+        return
+    for obj in session.dirty:
+        if isinstance(obj, (Evidence, Block, Transaction)):
+            raise _immutable_error()
+    for obj in session.deleted:
+        if isinstance(obj, (Evidence, Block, Transaction)):
+            raise _immutable_error()
+
+
+@event.listens_for(Session, 'do_orm_execute')
+def _block_bulk_mutations(execute_state):
+    if execute_state.session.info.get('allow_mutation'):
+        return
+    stmt = execute_state.statement
+    if isinstance(stmt, (Update, Delete)):
+        table = getattr(stmt, 'table', None)
+        if table is not None and table.name in IMMUTABLE_TABLES:
+            raise _immutable_error()
