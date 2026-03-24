@@ -151,18 +151,23 @@ def submit_evidence():
 @evidence_bp.route('', methods=['GET'])
 @login_required
 def list_evidence():
-    page = request.args.get('page', 1, type=int)
-    per_page = min(request.args.get('per_page', 20, type=int), 100)
-    query = Evidence.query.order_by(Evidence.created_at.desc())
-    paginated = query.paginate(page=page, per_page=per_page, error_out=False)
+    """
+    List all evidence records
+    ---
+    tags:
+      - Evidence
+    security:
+      - Bearer: []
+    responses:
+      200:
+        description: List of all evidence entries
+    """
+    all_evidence = Evidence.query.order_by(Evidence.created_at.desc()).all()
 
     return jsonify({
         'status': 'success',
-        'total_records': paginated.total,
-        'page': page,
-        'per_page': per_page,
-        'total_pages': paginated.pages,
-        'data': [e.to_dict(include_content=False) for e in paginated.items],
+        'total_records': len(all_evidence),
+        'data': [e.to_dict(include_content=False) for e in all_evidence],
     }), 200
 
 
