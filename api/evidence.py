@@ -100,14 +100,20 @@ def submit_evidence():
     evidence_id = data.get('evidenceId') or f"EVI-{uuid.uuid4().hex[:8].upper()}"
     content_hash = _sha256(content_text)
 
+    # Auto-generate missing metadata if not provided
+    honeypot_id = data.get('honeypotId') or f"HP-{uuid.uuid4().hex[:4].upper()}"
+    attack_type = data.get('attackType') or "SENSORY_ALERT"
+    source_ip_hash = data.get('sourceIpHash') or _sha256("0.0.0.0")
+    mitre_technique = data.get('mitreTechnique') or "T1059"
+
     # Build the full payload string (mirrors what chaincode would store)
     payload = json.dumps({
         'evidenceId': evidence_id,
-        'honeypotId': data.get('honeypotId', ''),
-        'honeypotType': data.get('honeypotType', ''),
-        'attackType': data.get('attackType', ''),
-        'sourceIpHash': data.get('sourceIpHash', ''),
-        'mitreTechnique': data.get('mitreTechnique', ''),
+        'honeypotId': honeypot_id,
+        'honeypotType': data.get('honeypotType', 'VirtualHoneypot'),
+        'attackType': attack_type,
+        'sourceIpHash': source_ip_hash,
+        'mitreTechnique': mitre_technique,
         'contentHash': content_hash,
         'submitter': user.username if user else 'unknown',
     }, sort_keys=True)
@@ -128,11 +134,11 @@ def submit_evidence():
         content_text=content_text,
         content_hash=content_hash,
         content_size_bytes=len(content_text.encode('utf-8')),
-        honeypot_id=data.get('honeypotId', ''),
-        honeypot_type=data.get('honeypotType', ''),
-        attack_type=data.get('attackType', ''),
-        source_ip_hash=data.get('sourceIpHash', ''),
-        mitre_technique=data.get('mitreTechnique', ''),
+        honeypot_id=honeypot_id,
+        honeypot_type=data.get('honeypotType', 'VirtualHoneypot'),
+        attack_type=attack_type,
+        source_ip_hash=source_ip_hash,
+        mitre_technique=mitre_technique,
         record_status='ACTIVE',
         custody_chain=json.dumps([{
             'org': user.org if user else 'org1.example.com',
